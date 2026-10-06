@@ -14,6 +14,6 @@
   <summary>Moja wersja iOS nie jest już obsługiwana przez najnowszą aplikację YouTube. Co mogę zrobić?</summary>
     <p>Oto kilka możliwych opcji:</p>
     <li><a href="https://ios.cfw.guide/get-started/">Zrób jailbreak urządzenia</a>, zainstaluj ostatnią obsługiwaną wersję YouTube ze sklepu App Store i <a href="http://dvntm0.github.io/#jb">zainstaluj DexTube Plus jako tweak</a></li>
-    <li><a href="https://ios.cfw.guide/installing-trollstore/">Zainstaluj TrollStore</a>, następnie <a href="https://github.com/Lessica/TrollFools/releases/">TrollFools</a>, zainstaluj ostatnią obsługiwaną wersję YouTube ze sklepu App Store i wstrzyknij <a href="https://github.com/dayanch96/YTLite/releases/">DexTube Plus</a> przy użyciu TrollFools</li>
-    <li>Znajdź kompatybilną wersję IPA w internecie i <a href="../README.md#how-to-build-a-dextube-plus-app-using-github-actions">zbuduj aplikację DexTube Plus przy użyciu GitHub Actions</a></li>
+    <li><a href="https://ios.cfw.guide/installing-trollstore/">Zainstaluj TrollStore</a>, następnie <a href="https://github.com/Lessica/TrollFools/releases/">TrollFools</a>, zainstaluj ostatnią obsługiwaną wersję YouTube ze sklepu App Store i wstrzyknij <a href="https://github.com/DexterDevKH/DTLite/releases/">DexTube Plus</a> przy użyciu TrollFools</li>
+    <li>Znajdź kompatybilną wersję IPA w internecie i <a href="../README.md#how-to-build-a-youtube-plus-app-using-github-actions">zbuduj aplikację DexTube Plus przy użyciu GitHub Actions</a></li>
 </details>

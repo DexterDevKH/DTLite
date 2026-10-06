@@ -14,6 +14,6 @@
   <summary>La mia versione di iOS non è più supportata dall'app YouTube. Cosa posso fare?</summary>
     <p>Ecco delle possibili opzioni:</p>
     <li><a href="https://ios.cfw.guide/get-started/">Esegui il jailbreak sul tuo dispositivo</a>, installa l'ultima versione di YouTube supportata nell'App Store, poi <a href="http://dvntm0.github.io/#jb">installa il tweak di DexTube Plus</a></li>
-    <li><a href="https://ios.cfw.guide/installing-trollstore/">Installa TrollStore</a>, poi <a href="https://github.com/Lessica/TrollFools/releases/">TrollFools</a>, installa l'ultima versione di YouTube supportata nell'App Store, e installa <a href="https://github.com/dayanch96/YTLite/releases/">DexTube Plus</a> utilizzando TrollFools</li>
-    <li>Trova un'IPA compatibile online e <a href="../README.md#how-to-build-a-dextube-plus-app-using-github-actions">builda DexTube Plus utilizzando Github actions</a></li>
+    <li><a href="https://ios.cfw.guide/installing-trollstore/">Installa TrollStore</a>, poi <a href="https://github.com/Lessica/TrollFools/releases/">TrollFools</a>, installa l'ultima versione di YouTube supportata nell'App Store, e installa <a href="https://github.com/DexterDevKH/DTLite/releases/">DexTube Plus</a> utilizzando TrollFools</li>
+    <li>Trova un'IPA compatibile online e <a href="../README.md#how-to-build-a-youtube-plus-app-using-github-actions">builda DexTube Plus utilizzando Github actions</a></li>
 </details>

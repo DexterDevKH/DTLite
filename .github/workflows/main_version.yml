@@ -61,7 +61,7 @@ on:
         description: "Update localization files from repo"
         type: boolean
         required: true
-        default: false
+        default: true
 
       ipa_url:
         description: "URL to the decrypted IPA file"
@@ -71,7 +71,7 @@ on:
 
       tweak_version:
         description: "The version of the tweak to use. Enter the version manually from dayanch96/YTLite/releases or leave default"
-        default: "6.0-b2"
+        default: "5.2.2"
         required: true
         type: string
 
@@ -89,7 +89,7 @@ on:
 
       info_note:
         description: "TIP: Learn more about integrations in the README via the link below"
-        default: "https://github.com/dayanch96/YTLite#tweak-integration-details"
+        default: "https://github.com/DexterDevKH/DTLite#tweak-integration-details"
         type: string
         required: false
 
@@ -104,11 +104,11 @@ jobs:
       enable_youpip: ${{ inputs.enable_youpip }}
       enable_ytuhd: ${{ inputs.enable_ytuhd }}
       enable_yq: ${{ inputs.enable_yq }}
-      enable_ycq: ${{ inputs.enable_ycq }}
-      enable_vbyt: ${{ inputs.enable_vbyt }}
       enable_ryd: ${{ inputs.enable_ryd }}
       enable_ytabc: ${{ inputs.enable_ytabc }}
       enable_demc: ${{ inputs.enable_demc }}
+      enable_ycq: ${{ inputs.enable_ycq }}
+      enable_vbyt: ${{ inputs.enable_vbyt }}
       enable_ytamp: ${{ inputs.enable_ytamp }}
       enable_localization: ${{ inputs.enable_localization }}
       tweak_version: ${{ inputs.tweak_version }}
@@ -121,6 +121,9 @@ jobs:
       contents: write
 
     steps:
+      - name: Mask sensitive IPA URL
+        run: echo "::add-mask::${{ github.event.inputs.ipa_url }}"
+
       - name: Download built debs
         uses: actions/download-artifact@v8
         with:
@@ -133,8 +136,10 @@ jobs:
           exclude_inputs: bundle_id,display_name,enable_demc,enable_ryd,enable_ytabc,enable_youpip,enable_yq,enable_ytuhd,enable_ycq,enable_vbyt,enable_ytamp,enable_localization,info_note,tweak_version
 
       - name: Download and validate IPA
+        env:
+          IPA_URL: ${{ github.event.inputs.ipa_url }}
         run: |
-          wget "${{ github.event.inputs.ipa_url }}" --no-verbose -O youtube.ipa
+          wget -q "$IPA_URL" -O youtube.ipa
           file_type=$(file --mime-type -b youtube.ipa)
           if [[ "$file_type" != "application/x-ios-app" && "$file_type" != "application/zip" ]]; then
             echo "::error::Validation failed: The downloaded file is not a valid IPA. Detected type: $file_type."

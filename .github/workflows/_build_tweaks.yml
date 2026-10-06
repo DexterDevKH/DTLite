@@ -18,16 +18,6 @@ on:
         required: true
         default: true
 
-      enable_ycq:
-        type: boolean
-        required: true
-        default: true
-
-      enable_vbyt:
-        type: boolean
-        required: true
-        default: true
-
       enable_ryd:
         type: boolean
         required: true
@@ -39,6 +29,16 @@ on:
         default: true
 
       enable_demc:
+        type: boolean
+        required: true
+        default: true
+
+      enable_ycq:
+        type: boolean
+        required: true
+        default: true
+
+      enable_vbyt:
         type: boolean
         required: true
         default: true
@@ -69,6 +69,10 @@ jobs:
     runs-on: macos-latest
 
     steps:
+      - name: Mask sensitive tweak URL
+        if: ${{ inputs.tweak_url != '' }}
+        run: echo "::add-mask::${{ inputs.tweak_url }}"
+
       - uses: actions/checkout@v6
         if: ${{ inputs.enable_localization }}
 
@@ -117,8 +121,10 @@ jobs:
 
       - name: Download DexTube Plus (by URL)
         if: ${{ inputs.tweak_url != '' }}
+        env:
+          TWEAK_URL: ${{ inputs.tweak_url }}
         run: |
-          wget "${{ inputs.tweak_url }}" --no-verbose -O ytplus.deb
+          wget -q "$TWEAK_URL" -O ytplus.deb
           file_type=$(file --mime-type -b ytplus.deb)
           if [[ "$file_type" != "application/vnd.debian.binary-package" ]]; then
             echo "::error::Validation failed: The file is not a valid DEB file. Detected type: $file_type."
@@ -268,16 +274,29 @@ jobs:
       - name: Update localization
         if: ${{ inputs.enable_localization }}
         run: |
+          git clone --quiet --depth=1 https://github.com/dayanch96/YTLite.git ytlite-repo
           mkdir debdir
           dpkg-deb -R ytplus.deb debdir
           rm ytplus.deb
-          find "layout/Library/Application Support/YTLite.bundle" \
+          TARGET_DIR=$(find debdir -type d -name "YTLite.bundle" | head -n 1)
+          if [ -z "$TARGET_DIR" ]; then
+            if [ -d "debdir/var/jb" ]; then
+              TARGET_DIR="debdir/var/jb/Library/Application Support/YTLite.bundle"
+            else
+              TARGET_DIR="debdir/Library/Application Support/YTLite.bundle"
+            fi
+            mkdir -p "$TARGET_DIR"
+          fi
+          find "ytlite-repo/layout/Library/Application Support/YTLite.bundle" \
             -mindepth 1 -maxdepth 1 -type d -name "*.lproj" -not -name "en.lproj" \
-            -exec cp -R "{}" "debdir/Library/Application Support/YTLite.bundle/" \;
+            -exec cp -Rf "{}" "$TARGET_DIR/" \;
+          rm -rf ytlite-repo
+          # Recalculate checksums and rebuild package
           cd debdir/
           find . -type f -not -path "./DEBIAN/*" -exec md5sum {} + | sort -k 2 | sed 's/\.\/\(.*\)/\1/' > DEBIAN/md5sums
           cd ../
           dpkg-deb --root-owner-group -b debdir ytplus.deb
+          rm -rf debdir
 
       - name: Upload built debs as artifacts
         uses: actions/upload-artifact@v7
