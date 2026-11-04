@@ -1,0 +1,222 @@
+name: Create DTLite Plus App By URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      enable_youpip:
+        description: "Integrate YouPiP"
+        type: boolean
+        required: true
+        default: true
+
+      enable_ytuhd:
+        description: "Integrate YTUHD"
+        type: boolean
+        required: true
+        default: true
+
+      enable_yq:
+        description: "Integrate YouQuality"
+        type: boolean
+        required: true
+        default: true
+
+      enable_ryd:
+        description: "Integrate Return YouTube Dislikes"
+        type: boolean
+        required: true
+        default: true
+
+      enable_ytabc:
+        description: "Integrate YTABConfig"
+        type: boolean
+        required: true
+        default: true
+
+      enable_demc:
+        description: "Integrate DontEatMyContent"
+        type: boolean
+        required: true
+        default: true
+
+      enable_ycq:
+        description: "Integrate YouChooseQuality"
+        type: boolean
+        required: true
+        default: true
+        
+      enable_vbyt:
+        description: "Integrate VolumeBoostYT"
+        type: boolean
+        required: true
+        default: true
+
+      enable_ytamp:
+        description: "Integrate YTAnotherMiniplayer"
+        type: boolean
+        required: true
+        default: true
+
+      enable_localization:
+        description: "Update localization files from repo"
+        type: boolean
+        required: true
+        default: true
+
+      ipa_url:
+        description: "URL to the decrypted IPA file"
+        default: ""
+        required: true
+        type: string
+
+      tweak_url:
+        description: "URL to the DTLite Plus tweak file (Optional: leave blank to use secret.TWEAK_URL)"
+        default: ""
+        required: false
+        type: string
+
+      display_name:
+        description: "App Name (Optional)"
+        default: "DexTube"
+        required: true
+        type: string
+
+      bundle_id:
+        description: "BundleID (Optional)"
+        default: "com.google.ios.youtube"
+        required: true
+        type: string
+
+      info_note:
+        description: "TIP: Learn more about integrations in the README via the link below"
+        default: "https://github.com/DexterDevKH/DTLite#tweak-integration-details"
+        type: string
+        required: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-tweaks:
+    uses: ./.github/workflows/_build_tweaks.yml
+    secrets: inherit
+    with:
+      enable_youpip: ${{ inputs.enable_youpip }}
+      enable_ytuhd: ${{ inputs.enable_ytuhd }}
+      enable_yq: ${{ inputs.enable_yq }}
+      enable_ryd: ${{ inputs.enable_ryd }}
+      enable_ytabc: ${{ inputs.enable_ytabc }}
+      enable_demc: ${{ inputs.enable_demc }}
+      enable_ycq: ${{ inputs.enable_ycq }}
+      enable_vbyt: ${{ inputs.enable_vbyt }}
+      enable_ytamp: ${{ inputs.enable_ytamp }}
+      enable_localization: ${{ inputs.enable_localization }}
+      tweak_url: ${{ inputs.tweak_url }}
+
+  package:
+    name: Package IPA
+    runs-on: macos-latest
+    needs: build-tweaks
+    permissions:
+      contents: write
+
+    steps:
+      - name: Mask sensitive URLs
+        run: |
+          echo "::add-mask::${{ github.event.inputs.ipa_url }}"
+          [ -n "${{ github.event.inputs.tweak_url }}" ] && echo "::add-mask::${{ github.event.inputs.tweak_url }}"
+          [ -n "${{ secrets.TWEAK_URL }}" ] && echo "::add-mask::${{ secrets.TWEAK_URL }}"
+
+      - name: Download built debs
+        uses: actions/download-artifact@v8
+        with:
+          name: built-debs
+          path: ${{ github.workspace }}
+
+      - name: Hide sensitive inputs
+        uses: levibostian/action-hide-sensitive-inputs@v1
+        with:
+          exclude_inputs: bundle_id,display_name,enable_demc,enable_ryd,enable_ytabc,enable_youpip,enable_yq,enable_ytuhd,enable_ycq,enable_vbyt,enable_ytamp,enable_localization,info_note
+
+      - name: Download and validate IPA
+        env:
+          IPA_URL: ${{ github.event.inputs.ipa_url }}
+        run: |
+          wget -q "$IPA_URL" -O youtube.ipa
+          file_type=$(file --mime-type -b youtube.ipa)
+          if [[ "$file_type" != "application/x-ios-app" && "$file_type" != "application/zip" ]]; then
+            echo "::error::Validation failed: The downloaded file is not a valid IPA. Detected type: $file_type."
+            exit 1
+          fi
+
+      - name: Get YouTube and Tweak Versions And Patch Info.plist
+        env:
+          INPUT_URL: ${{ github.event.inputs.tweak_url }}
+          SECRET_URL: ${{ secrets.TWEAK_URL }}
+        run: |
+          TWEAK_URL="${INPUT_URL:-$SECRET_URL}"
+          # Extract YouTube Version
+          unzip -q youtube.ipa -d ytextracted
+          echo "YT_VERSION=$(grep -A 1 '<key>CFBundleVersion</key>' ytextracted/Payload/YouTube.app/Info.plist | grep '<string>' | awk -F'[><]' '{print $3}')" >> $GITHUB_ENV
+          
+          # Extract Tweak Version
+          tweak_ver=""
+          if [ -f "ytplus.deb" ]; then
+            tweak_ver=$(dpkg-deb -f ytplus.deb Version 2>/dev/null || true)
+          fi
+          if [ -z "$tweak_ver" ] && [ -n "$TWEAK_URL" ]; then
+            clean_url="${TWEAK_URL%%\?*}"
+            filename=$(basename "$clean_url")
+            tweak_ver=$(echo "$filename" | cut -d'_' -f2)
+          fi
+          [ -z "$tweak_ver" ] && tweak_ver="custom"
+          echo "TWEAK_VERSION=$tweak_ver" >> $GITHUB_ENV
+
+          # Patch Info.plist
+          plist="$(find ytextracted/Payload -maxdepth 1 -name '*.app' | head -n 1)/Info.plist"
+          /usr/libexec/PlistBuddy -c "Delete :UIDesignRequiresCompatibility" "$plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Delete :NSFaceIDUsageDescription" "$plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Face ID is required to authenticate.'" "$plist"
+          rm youtube.ipa
+          (cd ytextracted && zip -qry ../youtube.ipa .)
+          rm -rf ytextracted
+
+      - name: Install cyan
+        run: pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip
+
+      - name: Inject tweaks into IPA
+        run: |
+          tweaks="ytplus.deb OpenYoutubeSafariExtension.appex"
+          for f in *.deb; do
+            [ -f "$f" ] && tweaks="$tweaks $f"
+          done
+          cyan -i youtube.ipa -o DTLitePlus_v${{ env.TWEAK_VERSION }}_${{ env.YT_VERSION }}.ipa -uwef $tweaks -n "${{ github.event.inputs.display_name }}" -b ${{ github.event.inputs.bundle_id }}
+
+      - name: Upload to GitHub Releases
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ytp-v${{ env.TWEAK_VERSION }}-${{ env.YT_VERSION }}
+          name: DTLitePlus v${{ env.TWEAK_VERSION }} ${{ env.YT_VERSION }}
+          files: DTLitePlus_v${{ env.TWEAK_VERSION }}_${{ env.YT_VERSION }}.ipa
+
+      - name: Output Release URL
+        run: |
+          echo "::notice::Release available at: https://github.com/${{ github.repository }}/releases"
+
+      - name: Trigger SideStore source update
+        env:
+          PAT: ${{ secrets.PAT }}
+        run: |
+          if [ -n "$PAT" ]; then
+            echo "Sending update dispatch to DexterDevKH/dexter-sources..."
+            curl -s -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $PAT" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              https://api.github.com/repos/DexterDevKH/dexter-sources/dispatches \
+              -d '{"event_type":"update"}'
+            echo "Instant update trigger dispatched successfully!"
+          else
+            echo "::warning::Secret 'PAT' not configured in this repo. Instant trigger skipped; scheduled cron on dexter-sources will update automatically."
+          fi
